@@ -22,7 +22,9 @@ export default function AuthGate() {
     let active = true;
     supabase.auth.getSession().then(({ data }) => { if (active) { setSession(data.session); setReady(true); } });
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
-    supabase.rpc("bootstrap_available").then(({ data: available }) => { if (active) setBootstrapAvailable(Boolean(available)); });
+    supabase.from("app_bootstrap_state").select("available").eq("id", true).maybeSingle().then(({ data: state }) => {
+      if (active) setBootstrapAvailable(Boolean(state?.available));
+    });
     return () => { active = false; data.subscription.unsubscribe(); };
   }, []);
 
