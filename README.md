@@ -32,6 +32,21 @@ A fresh production planning and QR/barcode scan tracking application.
 - [ ] Reports and exports
 - [ ] End-to-end and security checks
 
+## Current status
+
+- Responsive dashboard UI is deployed to Vercel.
+- Monthly plan and daily plan forms are available with local demo state.
+- Multiple text-based QR/barcode PDF files can be selected for browser-side text extraction; the UI previews candidate serials and duplicate candidates.
+- Scan station, live monitoring, report cards, and CSV export are UI prototypes using sample data.
+- The initial database migration is in `supabase/migrations/` but has not been applied to a V2 Supabase project yet.
+- PDF text extraction does not decode image-only QR/barcode artwork. A sample label PDF should be tested before deciding whether image decoding/OCR is required.
+- Data entered into the prototype is not yet persisted to a backend.
+
 ## Development setup
 
-The app scaffold and pinned dependencies will be added in subsequent commits. Do not add production secrets to this repository.
+1. Install Node.js LTS and npm.
+2. Run `npm install`.
+3. Copy `.env.example` to `.env` and set the new V2 Supabase URL and publishable key after the database is created.
+4. Run `npm run dev` for local development or `npm run build` to check the production build.
+
+Never add service-role keys or other production secrets to source control.
