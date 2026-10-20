@@ -90,7 +90,10 @@ function App() {
   const invalidCount = events.filter((e) => e.status === "Invalid").length + 4;
   const allocated = dailyPlans.reduce((sum, p) => sum + p.target, 0);
   const actual = dailyPlans.reduce((sum, p) => sum + p.actual, 0);
-  const capacity = Math.max(0, Math.floor((9 * 60) / 60)) * Number(dailyRate || 0);
+  const startMinuteOfDay = Number(dailyStart.split(":")[0]) * 60 + Number(dailyStart.split(":")[1]);
+  const endMinuteOfDay = Number(dailyEnd.split(":")[0]) * 60 + Number(dailyEnd.split(":")[1]);
+  const shiftMinutes = endMinuteOfDay > startMinuteOfDay ? endMinuteOfDay - startMinuteOfDay : endMinuteOfDay + 1440 - startMinuteOfDay;
+  const capacity = Math.max(0, Math.floor(shiftMinutes / 60)) * Number(dailyRate || 0);
   const estimatedHours = Number(dailyQty || 0) / Math.max(1, Number(dailyRate || 1));
 
   function addMonthlyPlan() {
