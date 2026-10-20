@@ -21,7 +21,7 @@ jobs:
           PY
       - name: Verify application build
         run: |
-          npm ci
+          npm install
           npm run build
       - name: Commit application changes
         run: |
