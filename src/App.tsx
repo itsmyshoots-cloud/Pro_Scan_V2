@@ -149,7 +149,6 @@ function App() {
               }
             }
           }
-          await document.destroy();
         } catch (error) {
           failed.push(`${file.name}: ${error instanceof Error ? error.message : "could not read PDF"}`);
         }
