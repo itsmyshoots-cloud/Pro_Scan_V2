@@ -9,10 +9,16 @@ import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { isSupabaseConfigured } from "./lib/supabase";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 type Page = "Overview" | "Monthly Plans" | "Daily Plans" | "Live Monitoring" | "Scan Events" | "Reports" | "Settings";
 
 type HourlyRow = { time: string; target: number; actual: number };
+type PdfImportSummary = { files: number; pages: number; extracted: number; unique: number; duplicates: number; failed: string[] };
+type PdfTextItem = { str?: string; hasEOL?: boolean };
 
 const chartData: HourlyRow[] = [
   { time: "08:00", target: 60, actual: 52 },
@@ -80,6 +86,10 @@ function App() {
   const [dailyRate, setDailyRate] = useState("60");
   const [dailyManpower, setDailyManpower] = useState("12");
   const [scanValue, setScanValue] = useState("");
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+  const [pdfSerials, setPdfSerials] = useState<string[]>([]);
+  const [pdfSummary, setPdfSummary] = useState<PdfImportSummary | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const filteredPlans = useMemo(() => plans.filter((p) =>
     (p.product + p.brand + p.id + p.month).toLowerCase().includes(search.toLowerCase())), [plans, search]);
@@ -96,23 +106,94 @@ function App() {
   const capacity = Math.max(0, Math.floor(shiftMinutes / 60)) * Number(dailyRate || 0);
   const estimatedHours = Number(dailyQty || 0) / Math.max(1, Number(dailyRate || 1));
 
+  async function parseSerialPdfs(files: File[]) {
+    setPdfFiles(files);
+    setPdfSerials([]);
+    setPdfSummary(null);
+    if (!files.length) return;
+    setPdfBusy(true);
+    const uniqueSerials: string[] = [];
+    const seen = new Set<string>();
+    let pages = 0;
+    let extracted = 0;
+    let duplicates = 0;
+    const failed: string[] = [];
+    const commonNonSerials = /^(MRP|SKU|QTY|QUANTITY|SERIAL|SERIALNO|SERIALNUMBER|MODEL|PRODUCT|BRAND|DATE|MFD|BATCH|PAGE|COPY|NO|IN|OUT)$/i;
+    try {
+      for (const file of files) {
+        if (!file.name.toLowerCase().endsWith(".pdf")) {
+          failed.push(`${file.name}: not a PDF file`);
+          continue;
+        }
+        try {
+          const document = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+          pages += document.numPages;
+          for (let pageNo = 1; pageNo <= document.numPages; pageNo += 1) {
+            const page = await document.getPage(pageNo);
+            const content = await page.getTextContent();
+            const items = content.items as PdfTextItem[];
+            const text = items.map((item) => item.str ?? "").join(" ");
+            const tokens = text
+              .replace(/\u00a0/g, " ")
+              .split(/[\s,;|]+/g)
+              .map((token) => token.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9._/-]+$/g, "").trim())
+              .filter((token) => token.length > 0 && token.length <= 64 && /\d/.test(token) && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(token) && !commonNonSerials.test(token));
+            for (const token of tokens) {
+              extracted += 1;
+              const normalized = token.toUpperCase();
+              if (seen.has(normalized)) {
+                duplicates += 1;
+              } else {
+                seen.add(normalized);
+                uniqueSerials.push(token);
+              }
+            }
+          }
+          await document.destroy();
+        } catch (error) {
+          failed.push(`${file.name}: ${error instanceof Error ? error.message : "could not read PDF"}`);
+        }
+      }
+      setPdfSerials(uniqueSerials);
+      setPdfSummary({ files: files.length, pages, extracted, unique: uniqueSerials.length, duplicates, failed });
+      if (!uniqueSerials.length) {
+        setNotice("No text-based serial candidates were found. This PDF may contain image-only QR labels or an unsupported layout; use a text-enabled PDF or add OCR/QR decoding support.");
+      } else {
+        setNotice(`PDF preview complete: ${uniqueSerials.length.toLocaleString()} unique candidates from ${files.length} file(s). Review the sample before saving the draft.`);
+      }
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
   function addMonthlyPlan() {
-    if (!newProduct.trim() || !newMrp.trim() || Number(newSerialStart) < 0 || Number(newSerialEnd) < Number(newSerialStart)) {
-      setNotice("Enter a product, MRP, and a valid serial range.");
+    if (!newProduct.trim() || !newMrp.trim()) {
+      setNotice("Enter a product and MRP.");
       return;
     }
-    const quantity = Number(newSerialEnd) - Number(newSerialStart) + 1;
-    const monthLabel = new Date(newMonth + "-01T12:00:00").toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+    if (pdfFiles.length > 0 && !pdfSerials.length) {
+      setNotice("The selected PDFs have no extracted serial candidates. Use a text-enabled PDF or clear the PDF selection to enter a manual serial range for this draft.");
+      return;
+    }
+    if (pdfFiles.length === 0 && (Number(newSerialStart) < 0 || Number(newSerialEnd) < Number(newSerialStart))) {
+      setNotice("Enter a valid serial range.");
+      return;
+    }
     const serialDigits = (value: number) => String(value).padStart(Math.max(newSerialStart.length, newSerialEnd.length), "0");
+    const quantity = pdfFiles.length ? pdfSerials.length : Number(newSerialEnd) - Number(newSerialStart) + 1;
+    const serialLabel = pdfFiles.length
+      ? `${pdfSerials[0]}–${pdfSerials[pdfSerials.length - 1]}`
+      : `${serialDigits(Number(newSerialStart))}–${serialDigits(Number(newSerialEnd))}`;
+    const monthLabel = new Date(newMonth + "-01T12:00:00").toLocaleDateString("en-IN", { month: "short", year: "numeric" });
     setPlans((prev) => [...prev, {
       id: `MP-${newMonth.replace("-", "")}-${String(prev.length + 1).padStart(3, "0")}`,
       brand: newBrand, product: newProduct.trim(), mrp: newMrp.startsWith("₹") ? newMrp : `₹${newMrp}`,
-      month: monthLabel, serials: `${serialDigits(Number(newSerialStart))}–${serialDigits(Number(newSerialEnd))}`,
-      quantity, status: "Draft",
+      month: monthLabel, serials: serialLabel, quantity, status: "Draft",
     }]);
     setShowMonthlyForm(false);
     setNewProduct(""); setNewMrp("");
-    setNotice("Demo monthly plan added. PDF import and database saving will be enabled after V2 database setup.");
+    setPdfFiles([]); setPdfSerials([]); setPdfSummary(null);
+    setNotice("Demo monthly plan added. PDF text extraction ran in this browser; the imported serial records are still temporary and will persist only after the new Supabase V2 schema is connected.");
   }
 
   function addDailyPlan() {
@@ -252,8 +333,9 @@ function App() {
           <Field label="First serial number"><input type="number" min="0" value={newSerialStart} onChange={(e) => setNewSerialStart(e.target.value)} /></Field>
           <Field label="Last serial number"><input type="number" min="0" value={newSerialEnd} onChange={(e) => setNewSerialEnd(e.target.value)} /></Field>
         </div>
-        <div className="upload-placeholder"><Upload size={21} /><div><strong>QR / Barcode PDF upload</strong><span>PDF import will parse serial values and report unique, duplicate, and invalid labels.</span></div><span className="coming-soon">NEXT STEP</span></div>
-        <div className="range-summary"><div><span>Serial range quantity</span><strong>{Math.max(0, Number(newSerialEnd) - Number(newSerialStart) + 1).toLocaleString()}</strong></div><div><span>Import status</span><strong className="text-amber">Not imported</strong></div></div>
+        <label className="upload-placeholder"><Upload size={21} /><div><strong>Upload QR / Barcode PDFs</strong><span>Select multiple text-based PDF label files. Serial-like text is extracted locally in your browser; image-only PDFs need OCR/QR decoding support.</span><input className="pdf-file-input" type="file" accept="application/pdf,.pdf" multiple onChange={(event) => { void parseSerialPdfs(Array.from(event.target.files ?? [])); }} /></div><span className="coming-soon">{pdfBusy ? "READING…" : "CHOOSE PDF"}</span></label>
+        {pdfSummary && <div className="pdf-import-results"><div className="pdf-results-grid"><div><span>Files</span><strong>{pdfSummary.files}</strong></div><div><span>Pages</span><strong>{pdfSummary.pages}</strong></div><div><span>Text candidates</span><strong>{pdfSummary.extracted.toLocaleString()}</strong></div><div><span>Unique candidates</span><strong>{pdfSummary.unique.toLocaleString()}</strong></div><div><span>Duplicates</span><strong className={pdfSummary.duplicates ? "text-amber" : ""}>{pdfSummary.duplicates.toLocaleString()}</strong></div></div>{pdfSummary.failed.length > 0 && <p className="pdf-error">{pdfSummary.failed.join(" · ")}</p>}{pdfSerials.length > 0 && <div className="serial-preview"><span>Preview (first {Math.min(8, pdfSerials.length)} candidates)</span><div>{pdfSerials.slice(0, 8).map((serial, index) => <code key={serial + index}>{serial}</code>)}</div></div>}</div>}
+        <div className="range-summary"><div><span>{pdfFiles.length ? "Unique serial candidates" : "Manual serial range quantity"}</span><strong>{(pdfFiles.length ? pdfSerials.length : Math.max(0, Number(newSerialEnd) - Number(newSerialStart) + 1)).toLocaleString()}</strong></div><div><span>Import status</span><strong className={pdfSummary?.unique ? "text-green" : "text-amber"}>{pdfBusy ? "Parsing PDF…" : pdfSummary?.unique ? "Preview ready" : "Not imported"}</strong></div></div>
         <div className="modal-actions"><button className="button button-secondary" onClick={() => setShowMonthlyForm(false)}>Cancel</button><button className="button button-primary" onClick={addMonthlyPlan}><Plus size={16} /> Save draft</button></div>
       </Modal>}
 
