@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Restore stable AppDb and apply final production upgrade
         run: |
-          git show 36ff6c2f3c31b0fb388895e355e594b6c2066cb4:src/AppDb.tsx > src/AppDb.tsx
+          curl -L --fail https://raw.githubusercontent.com/itsmyshoots-cloud/Pro_Scan_V2/36ff6c2f3c31b0fb388895e355e594b6c2066cb4/src/AppDb.tsx -o src/AppDb.tsx
           python - <<'PY'
           from pathlib import Path
           p=Path('src/AppDb.tsx'); s=p.read_text()
