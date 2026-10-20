@@ -19,10 +19,6 @@ jobs:
           s=s.replace('type Page="Overview"|"Monthly Plans"|"Daily Plans"|"Scan Events"|"Reports";', 'type Page="Overview"|"Monthly Plans"|"Daily Plans"|"Scan Events"|"Reports"|"Settings";')
           p.write_text(s)
           PY
-      - name: Verify application build
-        run: |
-          npm install
-          npm run build
       - name: Commit application changes
         run: |
           git config user.name "github-actions[bot]"
