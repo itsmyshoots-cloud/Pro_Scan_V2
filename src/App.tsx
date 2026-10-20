@@ -9,10 +9,6 @@ import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { isSupabaseConfigured } from "./lib/supabase";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 type Page = "Overview" | "Monthly Plans" | "Daily Plans" | "Live Monitoring" | "Scan Events" | "Reports" | "Settings";
 
@@ -120,6 +116,12 @@ function App() {
     const failed: string[] = [];
     const commonNonSerials = /^(MRP|SKU|QTY|QUANTITY|SERIAL|SERIALNO|SERIALNUMBER|MODEL|PRODUCT|BRAND|DATE|MFD|BATCH|PAGE|COPY|NO|IN|OUT)$/i;
     try {
+      // Load PDF.js only when the user imports a PDF, keeping the initial dashboard bundle lighter.
+      const [pdfjsLib, pdfWorkerModule] = await Promise.all([
+        import("pdfjs-dist"),
+        import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
+      ]);
+      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerModule.default;
       for (const file of files) {
         if (!file.name.toLowerCase().endsWith(".pdf")) {
           failed.push(`${file.name}: not a PDF file`);
@@ -160,6 +162,8 @@ function App() {
       } else {
         setNotice(`PDF preview complete: ${uniqueSerials.length.toLocaleString()} unique candidates from ${files.length} file(s). Review the sample before saving the draft.`);
       }
+    } catch (error) {
+      setNotice(`PDF import could not start: ${error instanceof Error ? error.message : "unexpected error"}`);
     } finally {
       setPdfBusy(false);
     }
