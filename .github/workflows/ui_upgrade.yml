@@ -10,4 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo ready
+      - name: Apply UI and planning upgrade
+        run: cat .github/ui_upgrade_part1.py .github/ui_upgrade_part2.py > /tmp/upgrade.py && python /tmp/upgrade.py
+      - name: Commit application changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/AppDb.tsx src/styles.css
+          git diff --cached --quiet && exit 0
+          git commit -m "Upgrade production control UI and daily planning"
+          git push
