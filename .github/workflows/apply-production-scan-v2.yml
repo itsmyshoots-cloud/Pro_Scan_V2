@@ -13,8 +13,8 @@ jobs:
       - name: Restore AppDb
         run: |
           python - <<'PY'
-          import base64,gzip,glob
-          raw=''.join(open(p,encoding='utf-8').read().strip() for p in sorted(glob.glob('.patch/appdb*.txt')))
+          import base64,gzip
+          raw=open('.patch/appdb-final.b64',encoding='utf-8').read().strip()
           open('src/AppDb.tsx','w',encoding='utf-8').write(gzip.decompress(base64.b64decode(raw)).decode())
           PY
           rm -rf .patch .github/workflows/apply-production-scan-v2.yml
