@@ -12,7 +12,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Restore stable AppDb and apply final production upgrade
         run: |
-          git show 5d8a29a94661247f030509e809aed56628bffb16:src/AppDb.tsx > src/AppDb.tsx
+          git show 745b65a3a1d58e16a2f834bfa1fa17d91fa761f3:src/AppDb.tsx > src/AppDb.tsx
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/AppDb.tsx'); s=p.read_text()
+          s=s.replace('type Daily={id:string;monthly_plan_id:string;production_date:string;line_id:string;shift_id:string;shift_start:string;shift_end:string;planned_quantity:number;target_per_hour:number;planned_hours:number;max_capacity_quantity:number;status:string;production_lines?:Line|Line[];production_shifts?:Shift|Shift[]};','type Daily={id:string;monthly_plan_id:string;production_date:string;line_id:string;shift_id:string;shift_start:string;shift_end:string;break_minutes:number;planned_quantity:number;target_per_hour:number;planned_hours:number;max_capacity_quantity:number;status:string;submitted_to_scan:boolean;locked_at:string|null;production_lines?:Line|Line[];production_shifts?:Shift|Shift[]};')
+          p.write_text(s)
+          PY
           python .github/final_patch.py
       - name: Commit application changes
         run: |
