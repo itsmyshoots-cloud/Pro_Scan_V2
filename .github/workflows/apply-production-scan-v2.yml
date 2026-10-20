@@ -1,0 +1,27 @@
+name: apply-production-scan-v2
+on:
+  push:
+    paths:
+      - .github/workflows/apply-production-scan-v2.yml
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore AppDb
+        run: |
+          python - <<'PY'
+          import base64,gzip,glob
+          raw=''.join(open(p,encoding='utf-8').read().strip() for p in sorted(glob.glob('.patch/appdb*.txt')))
+          open('src/AppDb.tsx','w',encoding='utf-8').write(gzip.decompress(base64.b64decode(raw)).decode())
+          PY
+          rm -rf .patch .github/workflows/apply-production-scan-v2.yml
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/AppDb.tsx .patch .github/workflows/apply-production-scan-v2.yml
+          git commit -m 'Upgrade scan station, planning and reporting workflow'
+          git push
