@@ -1,7 +1,7 @@
 import {useEffect,useState} from "react";
 import {supabase,isSupabaseConfigured} from "./lib/supabase";
 import {normalizeSerial,findExistingSerials} from "./lib/productionData";
-type Page="Overview"|"Monthly Plans"|"Daily Plans"|"Scan Events"|"Reports";
+type Page="Overview"|"Monthly Plans"|"Daily Plans"|"Scan Events"|"Reports"|"Settings";
 type Line={id:string;line_code:string;line_name:string};type Shift={id:string;shift_code:string;shift_name:string;start_time:string;end_time:string};
 type Plan={id:string;brand:string;product_name:string;model:string;mrp:number|null;planned_month:string;planned_quantity:number;imported_serial_quantity:number;status:string};
 type Daily={id:string;monthly_plan_id:string;production_date:string;line_id:string;shift_id:string;shift_start:string;shift_end:string;break_minutes:number;planned_quantity:number;target_per_hour:number;planned_hours:number;max_capacity_quantity:number;status:string;submitted_to_scan:boolean;locked_at:string|null;production_lines?:Line|Line[];production_shifts?:Shift|Shift[]};
