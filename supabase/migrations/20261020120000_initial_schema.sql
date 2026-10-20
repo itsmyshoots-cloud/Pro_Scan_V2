@@ -134,16 +134,20 @@ create table if not exists public.daily_plan_hour_targets (
 create table if not exists public.daily_plan_serials (
   id uuid primary key default gen_random_uuid(),
   daily_plan_id uuid not null references public.daily_production_plans(id) on delete cascade,
-  serial_registry_id uuid not null unique references public.serial_registry(id) on delete restrict,
+  serial_registry_id uuid not null references public.serial_registry(id) on delete restrict,
   allocated_at timestamptz not null default now(),
   allocated_by uuid references auth.users(id) on delete set null,
   produced_at timestamptz,
   released_at timestamptz,
   status text not null default 'allocated'
     check (status in ('allocated', 'produced', 'released')),
-  unique (daily_plan_id, serial_registry_id),
   check ((status <> 'produced') or produced_at is not null)
 );
+
+-- A serial may have allocation history, but only one active allocation at a time.
+create unique index if not exists daily_plan_serials_one_active_allocation_idx
+  on public.daily_plan_serials (serial_registry_id)
+  where status in ('allocated', 'produced');
 
 create index if not exists daily_plan_serials_plan_status_idx
   on public.daily_plan_serials (daily_plan_id, status);
@@ -290,17 +294,6 @@ declare
 begin
   v_normalized := upper(regexp_replace(btrim(coalesce(p_raw_value, '')), '\s+', '', 'g'));
 
-  if v_normalized = '' then
-    insert into public.scan_events (
-      raw_value, normalized_value, daily_plan_id, classification,
-      counted_as_production, device_id, message
-    ) values (
-      coalesce(p_raw_value, ''), '', p_daily_plan_id, 'invalid',
-      false, p_device_id, 'Empty scan value'
-    ) returning * into v_event;
-    return v_event;
-  end if;
-
   select * into v_plan
   from public.daily_production_plans
   where id = p_daily_plan_id;
@@ -310,8 +303,21 @@ begin
       raw_value, normalized_value, classification, counted_as_production,
       device_id, message
     ) values (
-      p_raw_value, v_normalized, 'invalid', false, p_device_id,
+      coalesce(p_raw_value, ''), v_normalized, 'invalid', false, p_device_id,
       'Daily production plan not found'
+    ) returning * into v_event;
+    return v_event;
+  end if;
+
+  if v_normalized = '' then
+    insert into public.scan_events (
+      raw_value, normalized_value, monthly_plan_id, daily_plan_id,
+      production_line_id, shift_id, classification, counted_as_production,
+      device_id, message
+    ) values (
+      coalesce(p_raw_value, ''), '', v_plan.monthly_plan_id, v_plan.id,
+      v_plan.production_line_id, v_plan.shift_id, 'invalid', false,
+      p_device_id, 'Empty scan value'
     ) returning * into v_event;
     return v_event;
   end if;
