@@ -138,7 +138,7 @@ function App() {
             const text = items.map((item) => item.str ?? "").join(" ");
             const tokens = text
               .replace(/\u00a0/g, " ")
-              .split(/[\s,;|]+/g)
+              .split(/[\s;|]+/g)
               .map((token) => token.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9._/-]+$/g, "").trim())
               .filter((token) => token.length > 0 && token.length <= 64 && /\d/.test(token) && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(token) && !commonNonSerials.test(token) && !(mrpDigits && /^\d+$/.test(token) && token === mrpDigits));
             for (const token of tokens) {
