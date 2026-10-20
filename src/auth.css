@@ -1,0 +1,104 @@
+/* Dedicated sign-in screen styling. Kept separate from the main application stylesheet. */
+.app-shell:has(> .auth-card){
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:minmax(0,1.15fr) minmax(420px,.85fr);
+  background:#f7f9fc;
+}
+.app-shell:has(> .auth-card)::before{
+  content:"";
+  grid-column:1;
+  grid-row:1;
+  min-height:100vh;
+  background:linear-gradient(135deg,#0c1b30 0%,#122b4b 55%,#1768c8 100%);
+  position:relative;
+}
+.app-shell:has(> .auth-card)::after{
+  content:"PRODUCTION CONTROL  •  SECURE FACTORY ACCESS\A\AReal-time production scanning\APlan  •  Scan  •  Monitor  •  Report";
+  white-space:pre-wrap;
+  grid-column:1;
+  grid-row:1;
+  align-self:end;
+  z-index:1;
+  color:#dce8f5;
+  font-family:Manrope,sans-serif;
+  font-size:12px;
+  line-height:1.8;
+  letter-spacing:.06em;
+  padding:0 8% 9%;
+  pointer-events:none;
+}
+.app-shell:has(> .auth-card) > .auth-card{
+  grid-column:2;
+  grid-row:1;
+  align-self:center;
+  justify-self:center;
+  width:min(430px,calc(100% - 72px));
+  padding:38px 40px 34px;
+  background:#fff;
+  border:1px solid #e5eaf1;
+  border-radius:14px;
+  box-shadow:0 22px 60px rgba(20,42,72,.10);
+  z-index:2;
+}
+.app-shell:has(> .auth-card) > .auth-card .brand-mark{
+  width:48px;
+  height:48px;
+  border-radius:14px;
+  margin-bottom:24px;
+  background:linear-gradient(145deg,#2c8cf5,#1858c4);
+  box-shadow:0 10px 24px rgba(28,115,232,.22);
+}
+.app-shell:has(> .auth-card) > .auth-card h1{
+  font-family:Manrope,sans-serif;
+  font-size:29px;
+  line-height:1.15;
+  letter-spacing:-.045em;
+  color:#142238;
+  margin:0 0 8px;
+}
+.app-shell:has(> .auth-card) > .auth-card p{
+  margin:0 0 26px;
+  color:#7a889b;
+  font-size:12px;
+  line-height:1.6;
+}
+.app-shell:has(> .auth-card) > .auth-card input{
+  width:100%;
+  height:46px;
+  display:block;
+  margin:0 0 11px;
+  padding:0 13px;
+  border:1px solid #dce3ec;
+  border-radius:8px;
+  background:#fff;
+  color:#1d2d43;
+  font-size:12px;
+  outline:none;
+}
+.app-shell:has(> .auth-card) > .auth-card input:focus{
+  border-color:#2c82ea;
+  box-shadow:0 0 0 3px rgba(44,130,234,.10);
+}
+.app-shell:has(> .auth-card) > .auth-card .button-primary{
+  width:100%;
+  height:46px;
+  margin-top:5px;
+  border-radius:8px;
+  font-size:12px;
+  box-shadow:0 7px 18px rgba(29,115,232,.16);
+}
+.app-shell:has(> .auth-card) > .auth-card .notice-banner{
+  margin:15px 0 0;
+  background:#fff3f4;
+  border-color:#f0c7ca;
+  color:#a93e46;
+}
+@media(max-width:800px){
+  .app-shell:has(> .auth-card){display:flex;align-items:center;justify-content:center;padding:22px;background:linear-gradient(135deg,#eef4fb,#f7f9fc)}
+  .app-shell:has(> .auth-card)::before,.app-shell:has(> .auth-card)::after{display:none}
+  .app-shell:has(> .auth-card) > .auth-card{width:min(430px,100%);padding:32px 28px 30px}
+}
+@media(max-width:430px){
+  .app-shell:has(> .auth-card) > .auth-card{padding:28px 22px 26px;border-radius:12px}
+}
