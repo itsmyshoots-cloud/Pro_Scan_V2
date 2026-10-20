@@ -115,6 +115,7 @@ function App() {
     let duplicates = 0;
     const failed: string[] = [];
     const commonNonSerials = /^(MRP|SKU|QTY|QUANTITY|SERIAL|SERIALNO|SERIALNUMBER|MODEL|PRODUCT|BRAND|DATE|MFD|BATCH|PAGE|COPY|NO|IN|OUT)$/i;
+    const mrpDigits = newMrp.replace(/\D/g, "");
     try {
       // Load PDF.js only when the user imports a PDF, keeping the initial dashboard bundle lighter.
       const [pdfjsLib, pdfWorkerModule] = await Promise.all([
@@ -139,7 +140,7 @@ function App() {
               .replace(/\u00a0/g, " ")
               .split(/[\s,;|]+/g)
               .map((token) => token.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9._/-]+$/g, "").trim())
-              .filter((token) => token.length > 0 && token.length <= 64 && /\d/.test(token) && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(token) && !commonNonSerials.test(token));
+              .filter((token) => token.length > 0 && token.length <= 64 && /\d/.test(token) && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(token) && !commonNonSerials.test(token) && !(mrpDigits && /^\d+$/.test(token) && token === mrpDigits));
             for (const token of tokens) {
               extracted += 1;
               const normalized = token.toUpperCase();
