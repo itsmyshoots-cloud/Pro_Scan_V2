@@ -1,0 +1,13 @@
+name: UI upgrade
+on:
+  push:
+    paths:
+      - '.github/workflows/ui_upgrade.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo ready
