@@ -18,7 +18,7 @@ jobs:
           p=Path('src/AppDb.tsx'); s=p.read_text()
           s=s.replace('type Daily={id:string;monthly_plan_id:string;production_date:string;line_id:string;shift_id:string;shift_start:string;shift_end:string;planned_quantity:number;target_per_hour:number;planned_hours:number;max_capacity_quantity:number;status:string;production_lines?:Line|Line[];production_shifts?:Shift|Shift[]};','type Daily={id:string;monthly_plan_id:string;production_date:string;line_id:string;shift_id:string;shift_start:string;shift_end:string;break_minutes:number;planned_quantity:number;target_per_hour:number;planned_hours:number;max_capacity_quantity:number;status:string;submitted_to_scan:boolean;locked_at:string|null;production_lines?:Line|Line[];production_shifts?:Shift|Shift[]};')
           p.write_text(s)
-          q=Path('.github/final_patch.py'); z=q.read_text(); q.write_text(z.replace("b=s.index(' async function saveHours',a)","b=s.index(' async function openEditDaily',a)"))
+          q=Path('.github/final_patch.py'); z=q.read_text(); z=z.replace("b=s.index(' async function saveHours',a)","b=s.index(' async function openEditDaily',a)"); z=z.replace("production_date,line_id,shift_id,planned_quantity,target_per_hour,planned_hours,max_capacity_quantity,status,production_lines","production_date,line_id,shift_id,shift_start,shift_end,planned_quantity,target_per_hour,planned_hours,max_capacity_quantity,status,production_lines"); q.write_text(z)
           PY
           python .github/final_patch.py
       - name: Commit application changes
